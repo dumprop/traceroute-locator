@@ -72,9 +72,9 @@ print(targetIP)
 hops = traceroute(hostname, count=10)
 
 print("Distance/TTL     Address     Min RTT     Geo")
-last_distance = 0
+last_distance = 1
 
-for i in range(len(hops[:-1])):
+for i in range(1,len(hops)):
     hop=hops[i]
     if last_distance + 1 != hop.distance:
         print("Some gateways are not responding")
@@ -87,7 +87,7 @@ for i in range(len(hops[:-1])):
     last_distance = hop.distance
 
 
-    query = db.insert(table).values(IP1=hop.address, IP2=hops[i+1].address, latency=hop.min_rtt) 
+    query = db.insert(table).values(IP1=hops[i-1].address, IP2=hop.address, latency=hop.min_rtt) 
     ResultProxy = connection.execute(query)
 
 
