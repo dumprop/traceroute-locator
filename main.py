@@ -6,6 +6,19 @@ from sqlalchemy import *
 import pandas as pd
 
 
+engine = create_engine('sqlite:///traceroute.db')
+connection = engine.connect()
+metadata = db.MetaData()
+
+table = db.Table('traceroutes', metadata,
+              db.Column('latency', db.Float()),
+              db.Column('IP1', db.String(255)),
+              db.Column('IP2', db.String(255))
+              )
+
+
+file_db = open('traceroute.txt', 'a')
+
 def get_my_location():
     """
     return: MyIP, lon,lat,city
@@ -43,59 +56,94 @@ def get_ip_location(ip):
     #     return "exception in get_ip_location"
 
 
-engine = create_engine('sqlite:///traceroute.db')
-connection = engine.connect()
-metadata = db.MetaData()
+def save_all_hops_with_rtt(hostname):
+    targetIP = socket.gethostbyname(hostname)
+    print(f'targetIP is {targetIP}')
+    hops = traceroute(targetIP, count=20)
+    last_distance = 1
+    first_ip = hops[0].address
+    for i in range(1,len(hops)):
+        hop=hops[i]
+        if last_distance + 1 != hop.distance:
+            print("Some gateways are not responding")
+        else:
+            print(f'inserting {first_ip}-{hop.address} with {hop.min_rtt} ms')
+            # query = db.insert(table).values(IP1=hops[i-1].address, IP2=hop.address, latency=hop.min_rtt) 
+            # query = db.insert(table).values(IP1=first_ip, IP2=hop.address, latency=hop.min_rtt) 
+            # ResultProxy = connection.execute(query)
+            query = table.insert().values(IP1=first_ip, IP2=hop.address, latency=hop.min_rtt)
+            connection.execute(query)
+            file_db.write(f'{first_ip};{hop.address};{hop.min_rtt}\n')
 
-table = db.Table('traceroutes', metadata,
-              db.Column('latency', db.Float()),
-              db.Column('IP1', db.String(255)),
-              db.Column('IP2', db.String(255))
-              )
+        # geo = get_ip_location(hop.address)
+        geo = ''
+
+        # See the Hop class for details
+        # print(f"{hop.distance}      {hop.address}       {hop.min_rtt} ms        {geo}")
+
+        last_distance = hop.distance
+        first_ip = hop.address
+
+
 
 
 hostname = 'ya.ru'
 #hostname = '1.1.1.1'
 
+# myLoc = get_my_location()
 
-myLoc = get_my_location()
+# print(myLoc)
 
-print(myLoc)
+# targetIP = socket.gethostbyname(hostname)
 
+# print(targetIP)
 
-targetIP = socket.gethostbyname(hostname)
+# hops = traceroute(hostname, count=20)
 
-print(targetIP)
+# print("Distance/TTL     Address     Min RTT     Geo")
+# last_distance = 1
 
+# first_ip = hops[0].address
 
+# for i in range(1,len(hops)):
+#     hop=hops[i]
+#     # if last_distance + 1 != hop.distance:
+#     #     print("Some gateways are not responding")
+#     # else:
+#     #     print(f'inserting {first_ip}-{hop.address} with {hop.min_rtt} ms')
 
-hops = traceroute(hostname, count=10)
+#     # geo = get_ip_location(hop.address)
+#     geo = ''
 
-print("Distance/TTL     Address     Min RTT     Geo")
-last_distance = 1
+#     # See the Hop class for details
+#     print(f"{hop.distance}      {hop.address}       {hop.min_rtt} ms        {geo}")
 
-for i in range(1,len(hops)):
-    hop=hops[i]
-    if last_distance + 1 != hop.distance:
-        print("Some gateways are not responding")
-
-    geo = get_ip_location(hop.address)
-
-    # See the Hop class for details
-    print(f"{hop.distance}      {hop.address}       {hop.min_rtt} ms        {geo}")
-
-    last_distance = hop.distance
-
-
-    query = db.insert(table).values(IP1=hops[i-1].address, IP2=hop.address, latency=hop.min_rtt) 
-    ResultProxy = connection.execute(query)
+#     last_distance = hop.distance
+#     first_ip = hop.address
 
 
+#     query = db.insert(table).values(IP1=hops[i-1].address, IP2=hop.address, latency=hop.min_rtt) 
+#     ResultProxy = connection.execute(query)
 
-output = connection.execute(table.select()).fetchall()
-print(output)
+# save_all_hops_with_rtt('ya.ru')
 
-df = pd.DataFrame(output)
 
-df.head(4)
+# output = connection.execute(table.select()).fetchall()
+# print(output)
+
+# df = pd.DataFrame(output)
+
+# df.head(10)
+
+
+
+hosts_file = open('hosts_for_tracerouting.txt').readlines()
+
+for host in hosts_file:
+    # print(host.strip())
+    save_all_hops_with_rtt(host.strip())
+
+connection.commit()
+connection.close()
+
 
