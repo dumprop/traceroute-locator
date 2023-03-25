@@ -22,8 +22,7 @@ import time
 # )
 # metadata.create_all(engine)
 
-file_db_string = open("traceroutes-string.txt", "a")
-file_db_unixtimestamp = open("traceroutes-unixtimestamp.txt", "a")
+
 
 
 def get_my_location():
@@ -83,13 +82,16 @@ def save_all_hops_with_rtt(hostname):
                         # print("Some gateways are not responding")
                     else:
                         # print(f"inserting {first_ip}-{hop.address} with {hop.min_rtt} ms")
-
+                        file_db_string = open("traceroutes-string.txt", "a")
+                        file_db_unixtimestamp = open("traceroutes-unixtimestamp.txt", "a")
                         file_db_string.write(
                             f"{datetime.now()};{first_ip};{hop.address};{hop.min_rtt}\n"
                         )
                         file_db_unixtimestamp.write(
                             f"{time.time()};{first_ip};{hop.address};{hop.min_rtt}\n"
                         )
+                        file_db_string.close()
+                        file_db_unixtimestamp.close()
 
                     # geo = get_ip_location(hop.address)
                     geo = ""
