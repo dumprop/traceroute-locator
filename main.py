@@ -68,9 +68,7 @@ def save_all_hops_with_rtt(hostname):
         if "/" in hostname:
             targetips = [str(ip) for ip in ipaddress.IPv4Network(hostname)]
         else:
-            print(hostname)
             targetips = [socket.gethostbyname(hostname)]
-            print(targetips)
 
         # print(f"targetips is {targetips}")
         for targetIP in targetips:
@@ -80,11 +78,11 @@ def save_all_hops_with_rtt(hostname):
                 first_ip = hops[0].address
                 for i in range(1, len(hops)):
                     hop = hops[i]
-                    print(hop)
                     if last_distance + 1 != hop.distance:
-                        print("Some gateways are not responding")
+                        pass
+                        # print("Some gateways are not responding")
                     else:
-                        print(f"inserting {first_ip}-{hop.address} with {hop.min_rtt} ms")
+                        # print(f"inserting {first_ip}-{hop.address} with {hop.min_rtt} ms")
 
                         file_db_string.write(
                             f"{datetime.now()};{first_ip};{hop.address};{hop.min_rtt}\n"
