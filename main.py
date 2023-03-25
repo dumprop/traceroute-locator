@@ -155,9 +155,10 @@ hostname = "ya.ru"
 
 hosts_file = open("hosts_for_tracerouting.txt").readlines()
 
-for host in hosts_file:
-    # print(host.strip())
-    save_all_hops_with_rtt(host.strip())
+while True:
+    for host in hosts_file:
+        # print(host.strip())
+        save_all_hops_with_rtt(host.strip())
 
 # connection.commit()
 # connection.close()
