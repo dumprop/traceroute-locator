@@ -6,22 +6,24 @@ from sqlalchemy import *
 import pandas as pd
 from datetime import datetime
 import ipaddress
+import time
 
-engine = create_engine("sqlite:///traceroute.db")
-connection = engine.connect()
-metadata = db.MetaData()
+# engine = create_engine("sqlite:///traceroute.db")
+# connection = engine.connect()
+# metadata = db.MetaData()
 
-table = db.Table(
-    "traceroutes",
-    metadata,
-    db.Column("datetime", db.String(255)),
-    db.Column("latency", db.Float()),
-    db.Column("IP1", db.String(255)),
-    db.Column("IP2", db.String(255)),
-)
-metadata.create_all(engine)
+# table = db.Table(
+#     "traceroutes",
+#     metadata,
+#     db.Column("datetime", db.String(255)),
+#     db.Column("latency", db.Float()),
+#     db.Column("IP1", db.String(255)),
+#     db.Column("IP2", db.String(255)),
+# )
+# metadata.create_all(engine)
 
-file_db = open("traceroute.txt", "a")
+file_db_string = open("traceroutes-string.txt", "a")
+file_db_unixtimestamp = open("traceroutes-unixtimestamp.txt", "a")
 
 
 def get_my_location():
@@ -62,43 +64,44 @@ def get_ip_location(ip):
 
 
 def save_all_hops_with_rtt(hostname):
-    if "/" in hostname:
-        targetips = [str(ip) for ip in ipaddress.IPv4Network(hostname)]
-    else:
-        targetips = [socket.gethostbyname(hostname)]
+    try:
+        if "/" in hostname:
+            targetips = [str(ip) for ip in ipaddress.IPv4Network(hostname)]
+        else:
+            print(hostname)
+            targetips = [socket.gethostbyname(hostname)]
+            print(targetips)
 
-    print(f"targetips is {targetips}")
-    for targetIP in targetips:
-        hops = traceroute(targetIP, count=20)
-        last_distance = 1
-        first_ip = hops[0].address
-        for i in range(1, len(hops)):
-            hop = hops[i]
-            if last_distance + 1 != hop.distance:
-                print("Some gateways are not responding")
-            else:
-                print(f"inserting {first_ip}-{hop.address} with {hop.min_rtt} ms")
-                # query = db.insert(table).values(IP1=hops[i-1].address, IP2=hop.address, latency=hop.min_rtt)
-                # query = db.insert(table).values(IP1=first_ip, IP2=hop.address, latency=hop.min_rtt)
-                # ResultProxy = connection.execute(query)
-                query = table.insert().values(
-                    datetime=datetime.now(),
-                    IP1=first_ip,
-                    IP2=hop.address,
-                    latency=hop.min_rtt,
-                )
-                connection.execute(query)
-                file_db.write(
-                    f"{datetime.now()};{first_ip};{hop.address};{hop.min_rtt}\n"
-                )
+        # print(f"targetips is {targetips}")
+        for targetIP in targetips:
+            hops = traceroute(targetIP, count=20)
+            if hops:
+                last_distance = 1
+                first_ip = hops[0].address
+                for i in range(1, len(hops)):
+                    hop = hops[i]
+                    print(hop)
+                    if last_distance + 1 != hop.distance:
+                        print("Some gateways are not responding")
+                    else:
+                        print(f"inserting {first_ip}-{hop.address} with {hop.min_rtt} ms")
 
-            # geo = get_ip_location(hop.address)
-            geo = ""
-            # See the Hop class for details
-            # print(f"{hop.distance}      {hop.address}       {hop.min_rtt} ms        {geo}")
+                        file_db_string.write(
+                            f"{datetime.now()};{first_ip};{hop.address};{hop.min_rtt}\n"
+                        )
+                        file_db_unixtimestamp.write(
+                            f"{time.time()};{first_ip};{hop.address};{hop.min_rtt}\n"
+                        )
 
-            last_distance = hop.distance
-            first_ip = hop.address
+                    # geo = get_ip_location(hop.address)
+                    geo = ""
+                    # See the Hop class for details
+                    # print(f"{hop.distance}      {hop.address}       {hop.min_rtt} ms        {geo}")
+
+                    last_distance = hop.distance
+                    first_ip = hop.address
+    except:
+        print(f'problem w/ {hostname}')
 
 
 hostname = "ya.ru"
@@ -156,5 +159,5 @@ for host in hosts_file:
     # print(host.strip())
     save_all_hops_with_rtt(host.strip())
 
-connection.commit()
-connection.close()
+# connection.commit()
+# connection.close()
